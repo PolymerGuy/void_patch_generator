@@ -10,12 +10,6 @@ Void = namedtuple("Void",["x","y","diameter"])
 # Use a quasi-random generator for reproducability
 rng = np.random.default_rng(12345)
 
-# Rectangular domain where the voids are to be inserted
-bounds = Rectangle(xmin=300,ymin=30,xmax=700,ymax=300*2)
-# Statistics of the voids to be inserted
-void_stats = Void_stats(n_voids=300,diam_mean=5,diam_std=1,min_spacing=5)
-
-
 def gen_void_from_stats(void_stats,bounds):
     domain_width = bounds.xmax-bounds.xmin
     domain_heigth = bounds.ymax-bounds.ymin
@@ -73,6 +67,11 @@ def plot_voids(voids):
     plt.xlim(left=bounds.xmin,right=bounds.xmax)
     plt.ylim(top=bounds.ymin,bottom=bounds.ymax)
     plt.show()
+
+# Rectangular domain where the voids are to be inserted
+bounds = Rectangle(xmin=300,ymin=30,xmax=700,ymax=600)
+# Statistics of the voids to be inserted
+void_stats = Void_stats(n_voids=300,diam_mean=5,diam_std=1,min_spacing=5)
 
 voids = make_voided_domain(void_stats,bounds)
 

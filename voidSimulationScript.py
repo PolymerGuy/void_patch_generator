@@ -58,6 +58,8 @@ def void_pressure_start_ygrad(void,domain_shape):
 #==============================================================================
 #                                User defined settings
 #==============================================================================
+# Tolerance for picking surfaces
+tol = 1e-5
 
 # Void data
 path_to_voids = "/home/sindreno/voidcloud/void_patch_generator/voids.csv"
@@ -77,9 +79,12 @@ locking_modulus = 600
 global_mesh_size = 5
 void_mesh_size = 1
 
+# Mass scaling
+target_time_inc = 5.e-5
+
 # Offset between void and particle
 void_particle_offset = 1.e-3
-tol = 1e-5
+
 
 # Domain size
 domain_corners = ((-20,30),(1000,600))
@@ -170,10 +175,9 @@ a.Instance(name='Domain-1', part=p, dependent=ON)
 #==============================================================================
 #                             Step definitions
 #==============================================================================
-
 mdb.models['Model-1'].ExplicitDynamicsStep(name='Pressurise', 
     previous='Initial', massScaling=((SEMI_AUTOMATIC, MODEL, AT_BEGINNING, 
-    0.0, 5e-05, BELOW_MIN, 0, 0, 0.0, 0.0, 0, None), ),timePeriod=pressurize_step_time)
+    0.0, target_time_inc, BELOW_MIN, 0, 0, 0.0, 0.0, 0, None), ),timePeriod=pressurize_step_time)
 mdb.models['Model-1'].ExplicitDynamicsStep(name='Deform', 
     previous='Pressurise',timePeriod=deformation_step_time)
 mdb.models['Model-1'].ExplicitDynamicsStep(name='Pressure propagation', 
