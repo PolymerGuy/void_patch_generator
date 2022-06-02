@@ -62,6 +62,9 @@ def void_pressure_start_ygrad(void,domain_shape):
 # Void data
 path_to_voids = "/home/sindreno/voidcloud/void_patch_generator/voids.csv"
 
+# Job name
+job_file_name = "propagation"
+
 # Material settings
 modulus = 1000.
 pois_ratio = 0.45
@@ -96,9 +99,9 @@ propagate_step_time = 2.0
 #==============================================================================
 #                                Initial calculations
 #==============================================================================
+voids = read_voids(path_to_voids)
 voids_with_pressure = [void_is_within_bounds(void,void_pressure_domain) for void in voids]
 void_start_times = [void_pressure_start_ygrad(void,void_pressure_domain)*(pressurize_step_time-void_pressure_rise_time) for void in voids]
-voids = read_voids(path_to_voids)
 
 #==============================================================================
 #                                Make model
@@ -181,8 +184,8 @@ mdb.models['Model-1'].ExplicitDynamicsStep(name='Pressure propagation',
 #==============================================================================
 
 # Smooth step amplitude
-mdb.models['Model-1'].SmoothStepAmplitude(name='SmoothStep', timeSpan=STEP, 
-        data=((0.0, 0.0), (1.0, 1.0)))
+mdb.models['Model-1'].SmoothStepAmplitude(name='InitialPressure', timeSpan=STEP, 
+        data=((0.0, 0.0), (pressurize_step_time, 1.0)))
 
 # Contact properties
 mdb.models['Model-1'].ContactProperty('ContactProperties')
@@ -244,7 +247,7 @@ mdb.models['Model-1'].rootAssembly.Surface(name="top surface", side1Edges=
 top_surface = mdb.models['Model-1'].rootAssembly.surfaces["top surface"]
 mdb.models['Model-1'].Pressure(name="Top surface pressure", 
     createStepName='Pressurise', region=top_surface, distributionType=UNIFORM, 
-    field='', magnitude=external_pressure, amplitude='SmoothStep')
+    field='', magnitude=external_pressure, amplitude='InitialPressure')
 
 
 #==============================================================================
@@ -284,8 +287,12 @@ mdb.models['Model-1'].DisplacementBC(name='FixedRigth',
     fieldName='', localCsys=None)
 
 # Rigth edge is moved to impose global strain
+# Smooth step amplitude
+mdb.models['Model-1'].SmoothStepAmplitude(name='DeformStep', timeSpan=STEP, 
+        data=((0.0, 0.0), (deformation_step_time, 1.0)))
+
 mdb.models['Model-1'].boundaryConditions['FixedRigth'].setValuesInStep(
-    stepName='Deform', u1=global_strain*(domain_corners[1][0]-domain_corners[0][0]), amplitude='SmoothStep')
+    stepName='Deform', u1=global_strain*(domain_corners[1][0]-domain_corners[0][0]), amplitude='DeformStep')
 
 
 if True:
