@@ -1,5 +1,7 @@
 # -*- coding: mbcs -*-
 # Do not delete the following import lines
+from logging import raiseExceptions
+import os
 import numpy as np
 from abaqus import *
 from abaqusConstants import *
@@ -54,6 +56,21 @@ def void_pressure_start_ygrad(void,domain_shape):
     heigth = ymax-ymin
     # Start from top
     return 1.-void[1]/heigth
+
+def set_user():
+    if "sindreno" in os.getcwd():
+        path_to_voids="/home/sindreno/voidcloud/void_patch_generator/voids.csv"
+        job_file_name="propagation"
+        path_to_mdb="/home/sindreno/localizationStudy/cleanscript/VoidTemplate"
+    elif "jonas" in os.getcwd():
+        path_to_voids="/home/jonas/git/void_patch_generator/voids.csv"
+        job_file_name="pressurised_voids"
+        path_to_mdb="/home/jonas/abaqus_work_dir/pressurised_voids/pressurised_voids"
+    else:
+        raise NameError("Unknown user.")
+
+    return path_to_voids, job_file_name, path_to_mdb
+
     
 #==============================================================================
 #                                User defined settings
@@ -61,11 +78,8 @@ def void_pressure_start_ygrad(void,domain_shape):
 # Tolerance for picking surfaces
 tol = 1e-5
 
-# Void data
-path_to_voids = "/home/sindreno/voidcloud/void_patch_generator/voids.csv"
-
-# Job name
-job_file_name = "propagation"
+# Void data, job name, MBD path
+path_to_voids, job_file_name, path_to_mdb = set_user()
 
 # Material settings
 modulus = 1000.
@@ -274,28 +288,28 @@ mdb.models['Model-1'].rootAssembly.Set(name="bottom edge", edges=
     ((domain_corners[0][0]+tol,domain_corners[0][1],0), )))   
 region = mdb.models['Model-1'].rootAssembly.sets["bottom edge"]
 
-mdb.models['Model-1'].DisplacementBC(name='Fixedbottom', 
+mdb.models['Model-1'].DisplacementBC(name='FixedBottom', 
     createStepName='Pressurise', region=region,u1=UNSET, u2=0.0, 
     ur3=UNSET, amplitude=UNSET, fixed=OFF, distributionType=UNIFORM, 
     fieldName='', localCsys=None)
 
-# Rigth edge is fixed
-mdb.models['Model-1'].rootAssembly.Set(name="rigth edge", edges=
+# Right edge is fixed
+mdb.models['Model-1'].rootAssembly.Set(name="right edge", edges=
     mdb.models['Model-1'].rootAssembly.instances['Domain-1'].edges.findAt(
     ((domain_corners[1][0],domain_corners[1][1]-tol,0), )))   
-region = mdb.models['Model-1'].rootAssembly.sets["rigth edge"]
+region = mdb.models['Model-1'].rootAssembly.sets["right edge"]
 
-mdb.models['Model-1'].DisplacementBC(name='FixedRigth', 
+mdb.models['Model-1'].DisplacementBC(name='FixedRight', 
     createStepName='Pressurise', region=region, u1=0.0, u2=UNSET, 
     ur3=UNSET, amplitude=UNSET, fixed=OFF, distributionType=UNIFORM, 
     fieldName='', localCsys=None)
 
-# Rigth edge is moved to impose global strain
+# Right edge is moved to impose global strain
 # Smooth step amplitude
 mdb.models['Model-1'].SmoothStepAmplitude(name='DeformStep', timeSpan=STEP, 
         data=((0.0, 0.0), (deformation_step_time, 1.0)))
 
-mdb.models['Model-1'].boundaryConditions['FixedRigth'].setValuesInStep(
+mdb.models['Model-1'].boundaryConditions['FixedRight'].setValuesInStep(
     stepName='Deform', u1=global_strain*(domain_corners[1][0]-domain_corners[0][0]), amplitude='DeformStep')
 
 
@@ -369,4 +383,4 @@ if True:
     # mdb.jobs['FirstTest'].submit(consistencyChecking=OFF)
 
     mdb.saveAs(
-        pathName='/home/sindreno/localizationStudy/cleanscript/VoidTemplate')
+        pathName=path_to_mdb)
