@@ -98,15 +98,15 @@ global_strain = 0.1
 deformation_step_time = 1.0
 # Then, the pressure is propagated into the specimen within a given region
 void_pressure_mag = 100.
-void_pressure_domain = ((450,0),(550,600))
+void_pressure_domain = ((420,0),(580,600))
 void_pressure_rise_time = 0.05
-propagate_step_time = 2.0
+propagate_step_time = 1.0
 #==============================================================================
 #                                Initial calculations
 #==============================================================================
 voids = read_voids(path_to_voids)
 voids_with_pressure = [void_is_within_bounds(void,void_pressure_domain) for void in voids]
-void_start_times = [void_pressure_start_ygrad(void,void_pressure_domain)*(pressurize_step_time-void_pressure_rise_time) for void in voids]
+void_start_times = [void_pressure_start_ygrad(void,void_pressure_domain)*(propagate_step_time-void_pressure_rise_time) for void in voids]
 
 #==============================================================================
 #                                Make model
@@ -145,7 +145,7 @@ mdb.models['Model-1'].Material(name='SimplePoly')
 mdb.models['Model-1'].materials['SimplePoly'].Density(table=((1e-09, ), ))
 mdb.models['Model-1'].materials['SimplePoly'].Elastic(table=((modulus, pois_ratio), ))
 mdb.models['Model-1'].materials['SimplePoly'].Plastic(table=((yield_stress, 0.0), (
-    yield_stress+hard_mod*locking_strain, 1.0), (yield_stress+hard_mod*locking_strain + locking_modulus*0.1, locking_strain+0.1)))
+    yield_stress+hard_mod*locking_strain, locking_strain), (yield_stress+hard_mod*locking_strain + locking_modulus*0.1, locking_strain+0.1)))
 
 mdb.models['Model-1'].HomogeneousSolidSection(name='PolySection', 
     material='SimplePoly', thickness=None)
