@@ -77,29 +77,30 @@ tol = 1e-5
 # Void data
 path_to_voids = "/home/jonas/git/void_patch_generator/voids.csv"
 
-
-use_vumat = True
-
 # Model and job name
 abq_model_name = "pvdf_SPM"
 job_file_name = abq_model_name
 
+# Model type (default=shell)
+axisymmetric_model = True
+
 # Material settings
+use_vumat = True
 if use_vumat:
     # define VUMAT material parameters
     mat_params = {
         # part A of the model
-        "youngs_modulus": 1158.0,  # Young's modulus [MPa]
-        "poissons_ratio": 0.45,  # Poisson's ratio [-]
-        "eps_0": 0.02,  # reference strain rate [1/s]
-        "C_t": 0.1,  # temperature-dependent strain-rate-sensitivity parameter [-]
-        "sigma_t0": 90,  # initial yield stress in uniaxial tension [Mpa]
-        "sigma_ts": 90,  # saturation yield stress in uniaxial tension [Mpa]
+        "youngs_modulus": 3000.0,  # Young's modulus [MPa]
+        "poissons_ratio": 0.3,  # Poisson's ratio [-]
+        "eps_0": 1e-3,  # reference strain rate [1/s]
+        "C_t": 7e-2,  # temperature-dependent strain-rate-sensitivity parameter [-]
+        "sigma_t0": 46.8,  # initial yield stress in uniaxial tension [Mpa]
+        "sigma_ts": 37.8,  # saturation yield stress in uniaxial tension [Mpa]
         "alpha": 1.0,  # ratio of uniaxial tensile and compressive yield stresses [-]
         "beta": 1.0,  # parameter controlling the plastic dilation [-]
-        "H": 100.0,  # hardening modulus / ramping parameter [-]
+        "H": 15.0,  # hardening modulus / ramping parameter [-]
         # part B of the model
-        "C_r": 100.0,  # initial elastic modulus of part B of the model [MPa]
+        "C_r": 5.5,  # initial elastic modulus of part B of the model [MPa]
         "kappa": 0.0,  # bulk modulus for network contribution in part B of the model [Mpa]
         "lambda_l": 2.0,  # locking stretch [-]
         # ABAQUS related
@@ -116,9 +117,9 @@ else:
 
 # Mesh settings
 # global_mesh_size = 5
-global_mesh_size = 15
+global_mesh_size = 50
 # void_mesh_size = 1
-void_mesh_size = 3
+void_mesh_size = 8
 
 # Mass scaling
 target_time_inc = 5.0e-5
@@ -128,7 +129,7 @@ void_particle_offset = 1.0e-3
 
 
 # Domain size
-domain_corners = ((-20, 30), (1000, 600))
+domain_corners = ((0, 0), (1000, 600))
 
 # Pressure and deformation settings
 # First external pressure is applied
@@ -181,10 +182,18 @@ for void in voids:
         center=(x, y), point1=(x, y + radius - void_particle_offset)
     )
 
+
 p = abq_model.Part(name="Domain", dimensionality=TWO_D_PLANAR, type=DEFORMABLE_BODY)
 p = abq_model.parts["Domain"]
 p.BaseShell(sketch=s)
 s.unsetPrimaryObject()
+
+if axisymmetric_model:
+    p.setValues(space=AXISYMMETRIC, type=DEFORMABLE_BODY)
+    abq_model.rootAssembly.regenerate()
+else:
+    pass
+
 p = abq_model.parts["Domain"]
 session.viewports["Viewport: 1"].setValues(displayedObject=p)
 del abq_model.sketches["__profile__"]
@@ -197,7 +206,7 @@ del abq_model.sketches["__profile__"]
 if use_vumat:
     # define SPM_PVDF
     abq_model.Material(name="SPM_PVDF")
-    abq_model.materials["SPM_PVDF"].Density(table=((1780e-9,),))
+    abq_model.materials["SPM_PVDF"].Density(table=((1.780e-9,),))
     abq_model.materials["SPM_PVDF"].UserMaterial(
         mechanicalConstants=(
             mat_params["youngs_modulus"],  # props(1)
@@ -597,17 +606,28 @@ if True:
 
     # Global seed
     p = abq_model.parts["Domain"]
+    p.setMeshControls(elemShape=QUAD, regions=all_faces)
     p.seedPart(size=global_mesh_size, deviationFactor=0.1, minSizeFactor=0.1)
     p.generateMesh()
 
-    elemType1 = mesh.ElemType(
-        elemCode=CPE4R,
-        elemLibrary=EXPLICIT,
-        secondOrderAccuracy=OFF,
-        hourglassControl=DEFAULT,
-        distortionControl=DEFAULT,
-    )
-    elemType2 = mesh.ElemType(elemCode=CPE3, elemLibrary=EXPLICIT)
+    if axisymmetric_model:
+        elemType1 = mesh.ElemType(
+            elemCode=CAX4R,
+            elemLibrary=STANDARD,
+            secondOrderAccuracy=OFF,
+            hourglassControl=DEFAULT,
+            distortionControl=DEFAULT,
+        )
+        elemType2 = mesh.ElemType(elemCode=CAX3, elemLibrary=STANDARD)
+    else:
+        elemType1 = mesh.ElemType(
+            elemCode=CPE4R,
+            elemLibrary=EXPLICIT,
+            secondOrderAccuracy=OFF,
+            hourglassControl=DEFAULT,
+            distortionControl=DEFAULT,
+        )
+        elemType2 = mesh.ElemType(elemCode=CPE3, elemLibrary=EXPLICIT)
 
     p = abq_model.parts["Domain"]
     pickedRegions = (all_faces,)
