@@ -1,4 +1,5 @@
 from matplotlib import use
+from matplotlib.pyplot import axis
 import numpy as np
 from abaqus import *
 from abaqusConstants import *
@@ -75,14 +76,17 @@ def edit_material_keywords(abq_model):
 tol = 1e-5
 
 # Void data
-path_to_voids = "/home/jonas/git/void_patch_generator/voids.csv"
+if axisymmetric_model:
+    path_to_voids = "/home/jonas/git/void_patch_generator/voids_axisymmetric.csv"
+else:
+    path_to_voids = "/home/jonas/git/void_patch_generator/voids.csv"
 
 # Model and job name
 abq_model_name = "pvdf_SPM"
 job_file_name = abq_model_name
 
 # Model type (default=shell)
-axisymmetric_model = True
+axisymmetric_model = False
 
 # Material settings
 use_vumat = True
